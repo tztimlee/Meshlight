@@ -42,6 +42,7 @@ fn main() -> ! {
     // rcc.apb2enr.write(|w| w.iopaen().set_bit()); //gpioa enable
     // rcc.apb2enr.write(|w| w.usart1en().set_bit());
     rcc.apb1enr.write(|w| w.usart2en().set_bit());
+
     // rcc.apb2enr.write(|w| unsafe {w.bits(0b100000000001100)}); 
     rcc.apb2enr.write(|w| unsafe {
         w.iopaen().set_bit();
