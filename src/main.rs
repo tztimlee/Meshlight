@@ -12,9 +12,9 @@ extern crate rtfm;
 use cortex_m::{asm, Peripherals as core_peripherals};
 use cortex_m_rt::entry;
 // use cortex_m_semihosting::{hprintln};
-use stm32f1::stm32f103::{Peripherals as board_peripherals};
+use stm32f1::stm32f103::{Peripherals as board_peripherals;
 // use stm32f1xx_hal::prelude::*;
-// use stm32f1xx_hal::delay::Delay;
+use stm32f1xx_hal::{delay, };
 // use rtfm::app; 
 
 
@@ -27,6 +27,7 @@ fn main() -> ! {
 
     let usart1 = &peripherals.USART1;
     let usart2 = &peripherals.USART2;
+    let usart3 = &peripherals.USART3;
 
     //115384
     let mantissa : u16 = 4;
@@ -42,6 +43,12 @@ fn main() -> ! {
     // rcc.apb2enr.write(|w| w.iopaen().set_bit()); //gpioa enable
     // rcc.apb2enr.write(|w| w.usart1en().set_bit());
     rcc.apb1enr.write(|w| w.usart2en().set_bit());
+    
+
+    rcc.apb1enr.write(|w| unsafe {
+        w.usart3en().set_bit();
+        w.usart2en().set_bit()
+    }); 
 
     // rcc.apb2enr.write(|w| unsafe {w.bits(0b100000000001100)}); 
     rcc.apb2enr.write(|w| unsafe {
@@ -71,7 +78,14 @@ fn main() -> ! {
 
     gpiob.crh.write(|w| unsafe{
         w.mode12().bits(0b11);
-        w.cnf12().bits(0b00)
+        w.cnf12().bits(0b00);
+
+        w.mode10().bits(0b11);
+        w.cnf10().bits(0b10);
+
+        w.mode11().bits(0b11);
+        w.cnf11().bits(0b10)
+
     });
 
     // asm::bkpt();
@@ -114,6 +128,19 @@ fn main() -> ! {
         w.div_mantissa().bits(mantissa);
         w.div_fraction().bits(fraction)
     }); //setting baud rate
+
+    
+    usart3.cr1.write(|w| unsafe {
+        w.ue().set_bit();
+        w.m().clear_bit();
+        w.te().set_bit()
+    });
+
+    usart3.cr2.write(|w| unsafe {w.stop().bits(0b00)}); //setting stop bits
+    usart3.brr.write(|w| unsafe {
+        w.div_mantissa().bits(mantissa);
+        w.div_fraction().bits(fraction)
+    }); //setting baud rate
     
     // asm::bkpt();
     // usart 2 config block end
@@ -144,15 +171,21 @@ fn main() -> ! {
         if usart1.sr.read().tc().bit() {
         // usart1.dr.write(|w| unsafe { w.bits(4) });
         usart1.dr.write(|w| unsafe { w.bits(0b10101010) });
-    }
-        
-        if usart2.sr.read().rxne().bit() {
-            x = usart2.dr.read().bits() as u8;
         }
 
-        if x == 0b10101010 {
-            gpiob.brr.write(|w| w.br12().set_bit()); //led on
-        }
+    
+        usart1.dr.write(|w| unsafe { w.bits(0b10101010) });
+        usart2.dr.write(|w| unsafe { w.bits(0b10101010) });
+        usart3.dr.write(|w| unsafe { w.bits(0b10101010) });
+    //    usart1.dr.write(|w| unsafe { w.bits(0b10101010) });
+        
+        // if usart2.sr.read().rxne().bit() {
+        //     x = usart2.dr.read().bits() as u8;
+        // }
+
+        // if x == 0b10101010 {
+        //     gpiob.brr.write(|w| w.br12().set_bit()); //led on
+        // }
     	
         // hprintln!("test").unwrap();
         
