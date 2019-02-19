@@ -9,10 +9,10 @@ extern crate stm32f1;
 extern crate stm32f1xx_hal;
 extern crate rtfm;
 
-use cortex_m::asm;
+use cortex_m::{asm, Peripherals as core_peripherals};
 use cortex_m_rt::entry;
 // use cortex_m_semihosting::{hprintln};
-// use stm32f1::stm32f103::{Peripherals};
+use stm32f1::stm32f103::{Peripherals as board_peripherals};
 // use stm32f1xx_hal::prelude::*;
 // use stm32f1xx_hal::delay::Delay;
 // use rtfm::app; 
