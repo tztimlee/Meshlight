@@ -31,10 +31,11 @@ const HEAP_SIZE: usize = 10240;
 #[app(device = stm32f1xx_hal::stm32)]
 const APP: () = {
 
+    static mut SHARED: u32 = 0;
+
     #[init]    
     fn init() {
         unsafe { ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE) }
-        rtfm::pend(Interrupt::USART1);
         hprintln!("Starting!!").unwrap();
     }
 
@@ -43,16 +44,30 @@ const APP: () = {
         // Growable array allocated on the heap!
         let xs = vec![0, 1, 2, 3, 4, 5];
         hprintln!("Vector: {:?}", xs).unwrap();
+
+        hprintln!("Triggering USART1...").unwrap();
         rtfm::pend(Interrupt::USART1);
+
+        hprintln!("Triggering USART2...").unwrap();
+        rtfm::pend(Interrupt::USART2);
 
         loop {
             hprintln!("Idling...").unwrap();
         }
     }
 
-    #[interrupt]
+    #[interrupt(resources = [SHARED])]
     fn USART1() {
-        hprintln!("Inside interrupt!");
+        hprintln!("USART 1 triggered ----------").unwrap();
+        hprintln!("Shared = {}", resources.SHARED).unwrap();
+        hprintln!("----------------------------").unwrap();
+    }
+
+    #[interrupt(resources = [SHARED])]
+    fn USART2() {
+        hprintln!("USART 2 triggered ----------").unwrap();
+        hprintln!("Shared = {}", resources.SHARED).unwrap();
+        hprintln!("----------------------------").unwrap();
     }
 
 };
