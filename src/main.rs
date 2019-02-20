@@ -10,7 +10,7 @@ extern crate stm32f1xx_hal;
 extern crate rtfm;
 extern crate nb;
 
-use cortex_m::{asm, Peripherals as core_peripherals};
+use cortex_m::{asm};
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
 use stm32f1::stm32f103::Peripherals;
@@ -22,10 +22,14 @@ use nb::block;
 // use rtfm::app; 
 
 
+
+
 #[entry]
 fn main() -> ! {
 
+    hprintln!("Here we go :D").unwrap();
     let p = Peripherals::take().unwrap();
+    hprintln!("test").unwrap();
 
     let mut flash = p.FLASH.constrain();
     let mut rcc = p.RCC.constrain();
@@ -36,6 +40,8 @@ fn main() -> ! {
 
     // let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
     let mut gpiob = p.GPIOB.split(&mut rcc.apb2);
+
+    hprintln!("test").unwrap();
 
     // USART1
     // let tx = gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh);
@@ -62,20 +68,36 @@ fn main() -> ! {
         &mut rcc.apb1,
     );
 
+    hprintln!("test").unwrap();
+
     let (mut tx, mut rx) = serial.split();
 
     let sent = b'X';
+
+    hprintln!("test").unwrap();
+
+    loop{
+        tx.write(0b10101010);
+        hprintln!("send").unwrap();
+    }
 
     block!(tx.write(sent)).ok();
 
     let received = block!(rx.read()).unwrap();
 
+    hprintln!("drumroll please").unwrap();
+
     if sent == received {
-        hprintln!("FCKING FINALLY");
+        hprintln!("FCKING FINALLY").unwrap();
+    } else {
+        hprintln!("FAK").unwrap();
     }
 
-    asm::bkpt();
+        
 
-loop {}
+    loop {
+        hprintln!("Idling").unwrap();
+    }
+
     
 }
