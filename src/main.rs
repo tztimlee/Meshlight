@@ -17,6 +17,8 @@ use core::alloc::Layout;
 
 use stm32f1::stm32f103::Interrupt;
 
+mod newrouter;
+
 use cortex_m_semihosting::hprintln;
 use stm32f1xx_hal::stm32;
 use rtfm::app;
