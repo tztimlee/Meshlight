@@ -14,14 +14,18 @@ extern crate panic_semihosting; // Log panic errors to stderr
 use alloc_cortex_m::CortexMHeap;
 use cortex_m::asm;
 use core::alloc::Layout;
+use cortex_m_rt::entry;
 
+use stm32f1::stm32f103;
 use stm32f1::stm32f103::Interrupt;
 
-mod newrouter;
+mod router;
 
 use cortex_m_semihosting::hprintln;
 use stm32f1xx_hal::stm32;
 use rtfm::app;
+
+use stm32f1xx_hal::prelude::*;
 
 use self::alloc::vec;
 
@@ -33,67 +37,40 @@ const HEAP_SIZE: usize = 10240;
 #[app(device = stm32f1xx_hal::stm32)]
 const APP: () = {
 
-    #[init(spawn = [parent_task])]
-    fn init() {
-        unsafe { ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE) }
-        hprintln!("Spawning parent task...").unwrap();
-        match spawn.parent_task() {
-            Ok(ok) => {
-                hprintln!("{:?} Spawn succeeded.", ok).unwrap();
-            },
-            Err(err) => {
-                hprintln!("{:?}", err).unwrap();
-            }
-        }
-        match spawn.parent_task() {
-            Ok(ok) => {
-                hprintln!("{:?} Spawn succeeded.", ok).unwrap();
-            },
-            Err(err) => {
-                hprintln!("{:?}", err).unwrap();
-            }
+    static mut DEVICE: stm32f1xx_hal::stm32::Peripherals = ();
+ 
+    #[init]
+    fn init() -> init::LateResources {
+        let device: stm32f1xx_hal::stm32::Peripherals = device;
+        init::LateResources {
+            DEVICE: device,
         }
     }
 
-    #[task(priority=3, spawn = [task_one, task_two])]
-    fn parent_task() {
-        hprintln!("Inside parent task...").unwrap();
+    #[idle(resources = [DEVICE])]
+    fn idle() -> ! {
+        // Get handles on the hardware
+        let gpiob = &resources.DEVICE.GPIOB;
+        let rcc = &resources.DEVICE.RCC;
 
-        hprintln!("Spawning task_one").unwrap();
-        spawn.task_one().unwrap();
-        hprintln!("\n... delay ...").unwrap();
-        hprintln!("... delay ...").unwrap();
-        hprintln!("... delay ...").unwrap();
-        hprintln!("\nSpawning task_two").unwrap();
-        spawn.task_two().unwrap();
-    }
+        // Enable GPIO clock
+        rcc.apb2enr.write(|w| w.iopben().set_bit());
+        gpiob.crh.write(|w| unsafe{
+            w.mode12().bits(0b11);
+            w.cnf12().bits(0b00)
+        });
+        gpiob.brr.write(|w| w.br12().set_bit());
 
-    #[task(priority=2)]
-    fn task_one() {
-        let mut i = 5;
-        while i != 0 {
-            hprintln!("{:?} task_one", i).unwrap();
-            i = i - 1;
+        loop {
+            hprintln!("looping");
+
+            // Blink the LEDs!
+            gpiob.bsrr.write(|w| w.bs12().set_bit());
+            cortex_m::asm::delay(2000000);
+            gpiob.brr.write(|w| w.br12().set_bit());
+            cortex_m::asm::delay(2000000);
         }
-        hprintln!("task_one finished").unwrap();
     }
-
-    #[task(priority=2)]
-    fn task_two() {
-        let mut i = 7;
-        while i != 0 {
-            hprintln!("{:?} task_two", i).unwrap();
-            i = i - 1;
-        }
-        hprintln!("task_two finished").unwrap();
-    }
-
-    extern "C" {
-        fn USART1();
-        fn USART2();
-        fn USART3();
-    }
-
 };
 
 // When an Out Of Memory condition occurs, trigger a breakpoint (for debugging)
