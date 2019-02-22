@@ -1,79 +1,167 @@
-
-//#![feature(alloc)]
-//#![feature(alloc_error_handler)]
+#![feature(alloc)]
+#![feature(alloc_error_handler)]
 #![no_std]
 #![no_main]
 
-//mod router;
+mod router;
 
-// alloc
-//extern crate alloc;
+extern crate alloc;
 extern crate stm32f1;
 extern crate stm32f1xx_hal;
-extern crate rtfm;
 extern crate panic_semihosting; // Log panic errors to stderr
+extern crate nb;
 
-//use alloc_cortex_m::CortexMHeap;
-//use cortex_m::asm;
-//use core::alloc::Layout;
+use core::alloc::Layout;
+use nb::block;
 
-//use stm32f1::stm32f103::Interrupt;
+use self::alloc::vec;
+use self::alloc::vec::Vec;
 
+use alloc_cortex_m::CortexMHeap;
+use cortex_m::asm;
+use cortex_m::Peripherals as core_peripherals;
+use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
-use rtfm::app;
 
-//use stm32f1xx_hal::prelude::*;
-
-//use self::alloc::vec;
-
-//#[global_allocator]
-//static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
-//
-//const HEAP_SIZE: usize = 10240;
-
-#[app(device = stm32f1xx_hal::stm32)]
-const APP: () = {
-
-    static mut DEVICE: stm32f1xx_hal::stm32::Peripherals = ();
- 
-    #[init]
-    fn init() -> init::LateResources {
-        let device: stm32f1xx_hal::stm32::Peripherals = device;
-        init::LateResources {
-            DEVICE: device,
-        }
-    }
-
-    #[idle(resources = [DEVICE])]
-    fn idle() -> ! {
-        // Get handles on the hardware
-        let gpiob = &resources.DEVICE.GPIOB;
-        let rcc = &resources.DEVICE.RCC;
-
-        // Enable GPIO clock
-        rcc.apb2enr.write(|w| w.iopben().set_bit());
-        gpiob.crh.write(|w| unsafe{
-            w.mode12().bits(0b11);
-            w.cnf12().bits(0b00)
-        });
-        gpiob.brr.write(|w| w.br12().set_bit());
-
-        loop {
-            hprintln!("looping").unwrap();
-
-            // Blink the LEDs!
-            gpiob.bsrr.write(|w| w.bs12().set_bit());
-            cortex_m::asm::delay(2000000);
-            gpiob.brr.write(|w| w.br12().set_bit());
-            cortex_m::asm::delay(2000000);
-        }
-    }
+use stm32f1::stm32f103::{Peripherals, interrupt};
+use stm32f1xx_hal::{
+    prelude::*,
+    rcc::Clocks,
+    time::MonoTimer,
+    timer::Timer,
+    serial::{Serial, Tx, Rx},
+    delay::Delay
 };
+
+#[global_allocator]
+static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+
+const HEAP_SIZE: usize = 10240;
+const MSG_DELAY: u16 = 1000;
+
+#[entry]
+fn main() -> ! {
+    // Initialization
+    let p = Peripherals::take().unwrap();
+    let cp = core_peripherals::take().unwrap();
+
+    let mut flash = p.FLASH.constrain();
+    let mut rcc = p.RCC.constrain();
+    let clocks = rcc.cfgr.sysclk(72.mhz()).pclk1(32.mhz()).freeze(&mut flash.acr);
+
+    let mut afio = p.AFIO.constrain(&mut rcc.apb2);
+    let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
+    let mut gpiob = p.GPIOB.split(&mut rcc.apb2);
+
+    let baudrate = 105_200;
+
+    // USART Initialization
+
+    // USART1
+    let tx1 = gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh);
+    let rx1 = gpioa.pa10;
+
+    // USART2
+    let tx2 = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
+    let rx2 = gpioa.pa3;
+
+    // USART3
+    let tx3 = gpiob.pb10.into_alternate_push_pull(&mut gpiob.crh);
+    let rx3 = gpiob.pb11;
+
+    // USART 1
+    let mut serial1 = Serial::usart1(
+        p.USART1,
+        (tx1, rx1),
+        &mut afio.mapr,
+        baudrate.bps(),
+        clocks,
+        &mut rcc.apb2,
+    );
+
+    let serial2 = Serial::usart2(
+        p.USART2,
+        (tx2, rx2),
+        &mut afio.mapr,
+        baudrate.bps(),
+        clocks,
+        &mut rcc.apb1,
+    );
+
+    let serial3 = Serial::usart3(
+        p.USART3,
+        (tx3, rx3),
+        &mut afio.mapr,
+        baudrate.bps(),
+        clocks,
+        &mut rcc.apb1,
+    );
+
+    let (mut tx1, mut rx1) = serial1.split();
+    let (mut tx2, mut rx2) = serial2.split();
+    let (mut tx3, mut rx3) = serial3.split();
+
+    let mut delay = Delay::new(cp.SYST, clocks);
+    delay.delay_ms(MSG_DELAY);
+
+    hprintln!("Going...");
+    let data_to_send = vec![0x1, 0x2, 0x3, 0x4];
+    hprintln!("sending {:?}", data_to_send);
+
+    loop {
+        if true {
+            /*for byte in data_to_send {
+                hprintln!("data: {:?}", byte);
+                block!(tx1.write(byte)).ok();
+                delay.delay_ms(MSG_DELAY);
+            }*/
+        } else {
+            match rx1.read() {
+                Ok(first_byte) => hprintln!("Got message: {:?}", first_byte).unwrap(),
+                Err(_) => hprintln!("No messages...").unwrap()
+            }
+        }
+    }
+}
+
+fn send_message(tx: &mut Tx<stm32f1xx_hal::stm32::USART1>, delay: &mut stm32f1xx_hal::delay::Delay, data: Vec<u8>) {
+    for byte in data {
+        block!(tx.write(byte)).ok();
+        delay.delay_ms(MSG_DELAY);
+    }
+}
+
+/*fn read_message(rx: &mut Rx<stm32f1xx_hal::stm32::USART1>, delay: &mut stm32f1xx_hal::delay::Delay, first_byte: u8) {
+    let mut data = Vec::new();
+    data.push(first_byte);
+    'outer: loop {
+        delay.delay_ms(50);
+        match rx.read() {
+            Ok(byte) => {
+                if byte == 0xFF {
+                    hprintln!("breaking...").unwrap();
+                    break 'outer;
+                } 
+                hprintln!("Got intermediate data: {:?}", byte).unwrap();
+                data.push(byte);
+            }
+            Err(_) => hprintln!("No messages...").unwrap()
+        }
+    }
+    hprintln!("Got data: {:?}", data);
+}*/
+
+#[interrupt]
+fn USART1() {
+    hprintln!("Interrupted!").unwrap();
+}
 
 // When an Out Of Memory condition occurs, trigger a breakpoint (for debugging)
 // and loop indefinitely.  #[alloc_error_handler]
-/*#[alloc_error_handler]
+#[alloc_error_handler]
 fn alloc_error(_layout: Layout) -> ! {
     asm::bkpt();
-    loop {}
-}*/
+    loop {
+        hprintln!("Memory error").unwrap();
+    }
+}
