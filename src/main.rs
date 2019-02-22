@@ -41,6 +41,7 @@ const MSG_DELAY: u16 = 1000;
 
 #[entry]
 fn main() -> ! {
+    unsafe { ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE) }
     // Initialization
     let p = Peripherals::take().unwrap();
     let cp = core_peripherals::take().unwrap();
@@ -105,16 +106,14 @@ fn main() -> ! {
     delay.delay_ms(MSG_DELAY);
 
     hprintln!("Going...");
-    let data_to_send = vec![0x1, 0x2, 0x3, 0x4];
-    hprintln!("sending {:?}", data_to_send);
 
     loop {
-        if true {
-            /*for byte in data_to_send {
-                hprintln!("data: {:?}", byte);
+        if false {
+            let data_to_send = vec![0x1, 0x2, 0x3, 0x4];
+            for byte in data_to_send {
                 block!(tx1.write(byte)).ok();
                 delay.delay_ms(MSG_DELAY);
-            }*/
+            }
         } else {
             match rx1.read() {
                 Ok(first_byte) => hprintln!("Got message: {:?}", first_byte).unwrap(),
@@ -131,25 +130,24 @@ fn send_message(tx: &mut Tx<stm32f1xx_hal::stm32::USART1>, delay: &mut stm32f1xx
     }
 }
 
-/*fn read_message(rx: &mut Rx<stm32f1xx_hal::stm32::USART1>, delay: &mut stm32f1xx_hal::delay::Delay, first_byte: u8) {
+fn receive_message(rx: &mut Rx<stm32f1xx_hal::stm32::USART1>, delay: &mut stm32f1xx_hal::delay::Delay, first_byte: u8) -> Vec<u8> {
     let mut data = Vec::new();
+    let mut receiving = true;
     data.push(first_byte);
-    'outer: loop {
-        delay.delay_ms(50);
+    while receiving {
         match rx.read() {
             Ok(byte) => {
-                if byte == 0xFF {
-                    hprintln!("breaking...").unwrap();
-                    break 'outer;
-                } 
-                hprintln!("Got intermediate data: {:?}", byte).unwrap();
+                receiving = byte != 0xFF;
                 data.push(byte);
+            },
+            Err(_) => {
+                hprintln!("Waiting on next message").unwrap();
             }
-            Err(_) => hprintln!("No messages...").unwrap()
-        }
+        } 
     }
-    hprintln!("Got data: {:?}", data);
-}*/
+    hprintln!("Got end byte 0xFF").unwrap();
+    data
+}
 
 #[interrupt]
 fn USART1() {
