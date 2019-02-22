@@ -36,9 +36,12 @@ type RX = Rx<stm32f103::USART1>;
 
 
 
+
+
 #[entry]
 fn main() -> ! {
 
+    hprintln!("Here we go :D").unwrap();
     let p = Peripherals::take().unwrap();
     let cp = core_peripherals::take().unwrap();
 
