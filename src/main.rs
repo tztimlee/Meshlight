@@ -10,7 +10,7 @@ extern crate stm32f1xx_hal;
 extern crate rtfm;
 extern crate nb;
 
-// use cortex_m::{asm, Peripherals as core_peripherals};
+use cortex_m::{asm, Peripherals as core_peripherals};
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use cortex_m_semihosting::hprintln;
 use stm32f1::stm32f103::{
@@ -20,7 +20,8 @@ use stm32f1::stm32f103::{
 use stm32f1::stm32f103;
 use stm32f1xx_hal::{
     prelude::*,
-    serial::{Serial, Tx, Rx},    
+    serial::{Serial, Tx, Rx},
+    delay::Delay,    
 };
 use nb::block;
 // use rtfm::app; 
@@ -39,18 +40,27 @@ type RX = Rx<stm32f103::USART1>;
 fn main() -> ! {
 
     let p = Peripherals::take().unwrap();
+    let cp = core_peripherals::take().unwrap();
 
     let mut flash = p.FLASH.constrain();
     let mut rcc = p.RCC.constrain();
 
-    let clocks = rcc.cfgr.freeze(&mut flash.acr);
+    // let clocks = rcc.cfgr.freeze(&mut flash.acr);
+    let clocks = rcc.cfgr.sysclk(72.mhz()).pclk1(32.mhz()).freeze(&mut flash.acr);
 
     let mut afio = p.AFIO.constrain(&mut rcc.apb2);
 
     let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
     let mut gpiob = p.GPIOB.split(&mut rcc.apb2);
 
-
+    //clock config
+    // rcc.crr.write(|w| w.hseon()).set_bit());
+    // rcc.cfgr.write(|w| unsafe {
+    //     w.usart3en().set_bit();
+    //     w.usart2en().set_bit()
+    // });
+    
+    
     // static mut TX: TX = gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh);
     // static mut RX: RX = gpioa.pa10;
 
@@ -107,66 +117,97 @@ fn main() -> ! {
     let sent = b'X';
     let received= b'D';
 
-    hprintln!("USART1 Test").unwrap();
+    // hprintln!("USART1 Test").unwrap();
 
-    hprintln!("send block1").unwrap();
+    // hprintln!("send block1").unwrap();
     block!(tx1.write(sent)).ok();
     // tx1.write(sent).unwrap();
 
-    hprintln!("receive block1").unwrap();
+    // hprintln!("receive block1").unwrap();
     let received = block!(rx1.read()).unwrap();
     // let received = rx1.read().unwrap();
 
-    hprintln!("message check, message sent = {}, message recieved is {}", sent, received).unwrap();
+    // hprintln!("message check, message sent = {}, message recieved is {}", sent, received).unwrap();
     // write!("message is {}!",  str::from_u8(received));
     if sent == received {
-        hprintln!("USART1 works").unwrap();
+        // hprintln!("USART1 works").unwrap();
     }
 
-    hprintln!("USART2 Test").unwrap();
+    // hprintln!("USART2 Test").unwrap();
 
     let sent = b'E';
 
-    hprintln!("send block2").unwrap();
+    // hprintln!("send block2").unwrap();
     block!(tx2.write(sent)).ok();
     // tx2.write(sent).unwrap();
 
-    hprintln!("receive block2").unwrap();
+    // hprintln!("receive block2").unwrap();
     let received = block!(rx2.read()).unwrap();
     // let received = rx2.read().unwrap();
 
-    hprintln!("message check, message sent = {}, message recieved is {}", sent, received).unwrap();
+    // hprintln!("message check, message sent = {}, message recieved is {}", sent, received).unwrap();
     // write!("message is {}!",  str::from_u8(received));
     if sent == received {
-        hprintln!("USART2 works").unwrap();
+        // hprintln!("USART2 works").unwrap();
     }
 
-    hprintln!("USART3 Test").unwrap();
+    // hprintln!("USART3 Test").unwrap();
 
     let sent = b'C';
 
-    hprintln!("send block3").unwrap();
+    // hprintln!("send block3").unwrap();
     block!(tx3.write(sent)).ok();
     // tx3.write(sent).unwrap();
 
-    hprintln!("receive block3").unwrap();
+    // hprintln!("receive block3").unwrap();
     let received = block!(rx3.read()).unwrap();
     // let received = rx3.read().unwrap();
 
-    hprintln!("message check, message sent = {}, message recieved is {}", sent, received).unwrap();
+    // hprintln!("message check, message sent = {}, message recieved is {}", sent, received).unwrap();
     // write!("message is {}!",  str::from_u8(received));
     if sent == received {
-        hprintln!("USART3 works").unwrap();
+        // hprintln!("USART3 works").unwrap();
     }
 
-    hprintln!("end").unwrap();
+    // hprintln!("end").unwrap();
+
+    // asm::bkpt();
+
+    let mut led = gpiob.pb12.into_push_pull_output(&mut gpiob.crh);
+    let mut outPin = gpioa.pa1.into_push_pull_output(&mut gpioa.crl);
+    let mut delay = Delay::new(cp.SYST, clocks);
+
+    let mut timera : u32 = 0;
+
+    led.set_low();
+
+    hprintln!("sysclock test {}, clock2 {}", clocks.sysclk().0, clocks.pclk1().0);
 
     // asm::bkpt();
 
 
 loop {
 
-    // hprintln!("Idling").unwrap();
+    timera = 0;
+
+    hprintln!("LED on").unwrap();
+
+    led.set_high();
+
+    while timera <= (400000 as u32){
+        timera = timera + 1;
+    }
+
+    
+
+    hprintln!("LED off").unwrap();
+    led.set_low();    
+
+    timera = 0;
+    while timera <= (400000 as u32){
+        timera = timera + 1;
+    }
+
 }
     
     
@@ -180,6 +221,14 @@ fn HardFault(ef: &ExceptionFrame) -> ! {
 #[exception]
 fn DefaultHandler(irqn: i16) {
     panic!("Unhandled exception (IRQn = {})", irqn);
+}
+
+fn send_one() {
+    hprintln!("Another function.");
+}
+
+fn another_function() {
+    hprintln!("Another function.");
 }
 
     // #[interrupt]
