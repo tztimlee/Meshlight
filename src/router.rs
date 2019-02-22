@@ -2,7 +2,7 @@
 extern crate alloc;
 use self::alloc::collections::{BTreeMap, VecDeque};
 use cortex_m_semihosting::hprintln;
-use self::alloc::vec;
+use self::alloc::vec::Vec;
 
 type NodeID = u8;
 type PinID = u8;
@@ -30,6 +30,29 @@ type Message = (NodeID, MessageBody);
 // destination node.
 enum MessageBody {
     DistanceVector(DistanceVector),
+}
+
+const END_BYTE: u8 = 0xFF;
+
+trait Serialize {
+    fn serialize(&self) -> Vec<u8>;
+}
+
+impl Serialize for Message {
+    fn serialize(&self) -> Vec<u8> {
+        let mut data = Vec::new();
+        match &self {
+            (node_id, MessageBody::DistanceVector(dist_vec)) => {
+                data.push(*node_id);
+                for (node_id, cost) in dist_vec.iter() {
+                    data.push(*node_id);
+                    data.push(*cost);
+                }
+            }
+        }
+        data.push(END_BYTE);
+        data
+    }
 }
 
 // Router is the routing instance for this node
@@ -96,7 +119,7 @@ impl Router {
     }
 }
 
-fn send(node_id: NodeID, msgBody: MessageBody) {
+fn send(node_id: NodeID, msg_body: MessageBody) {
     // do something with (node_id, msg_body) 
     hprintln!("Sending message...").unwrap();
 }
