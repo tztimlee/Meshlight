@@ -120,6 +120,7 @@ impl Router {
 }
 
 fn send(node_id: NodeID, msg_body: MessageBody) {
-    // do something with (node_id, msg_body) 
-    hprintln!("Sending message...").unwrap();
+    let message = (node_id, msg_body);
+    let bytes = message.serialize();
+    // Connect to USART send message in main.rs
 }
