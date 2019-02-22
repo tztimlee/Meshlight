@@ -35,9 +35,6 @@ type RX = Rx<stm32f103::USART1>;
 // static mut RX = ();
 
 
-
-
-
 #[entry]
 fn main() -> ! {
 
