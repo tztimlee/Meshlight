@@ -2,6 +2,8 @@
 
 This item – our *artefact* – is an interactive gallery piece. It features the behaviour of the famous distance-vector routing algorithm in an approachable, interesting way.
 
+![Photo of the final artefact](photo-display.png?raw=true "Photo of final artefact")
+
 **Why?**
 
 The average person doesn’t understand the structures that enable our modern internet.
@@ -89,6 +91,8 @@ All code here is licensed under the MIT license ([LICENSE-MIT](LICENSE-MIT) or h
 ## Contribution
 
 This project was sunsetted on the 22 Feb, 2019. If you're looking to develop this further, I recommend either forking (or cloning) the repo, and working on it seperately. Please contact us for any questions!
+
+We ran into problems getting the boards to reliably (!) communicate, and implementing the WS2811 protocol (clock speed differences). We'd love to know if you solve them - please fling us an email with your discoveries.
 
 ## Contact
 
