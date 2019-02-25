@@ -12,17 +12,6 @@ Of course, the words “distance vector routing” don’t spark interest and ex
 
 The blinking LEDs and interactive "nodes" let the viewer see, in realtime, how the network topology changes under node churn (coming online, going offlien). This is really interesting, and looks *really cool*, but it needs to be approachable for general audiences.
 
-## Dependencies
-
-To build embedded programs using this template you'll need:
-
-- Rust 1.31, 1.30-beta, nightly-2018-09-13 or a newer toolchain
-- `cargo`
-- `stm321fxx-hal`
-- `cortex_m`
-- `cortex_m_rt`
-- `openocd`
-
 ## Hardware
 
 Since this is a mesh network, it can have any number of nodes! That's basically the point - it is resistant to changing network topologies. I'll list out the exact products we used, but this can easily be changed to suit larger (or smaller!) displays.
@@ -38,10 +27,12 @@ The amount of LED strips will vary depending on the number of black pill boards 
 
 ### Setup Instructions
 
+![Diagram of the black pill board](board-diagram.png?raw=true "Black Pill Board Diagram")
+
 Each board makes use of all three usarts, enabling you to connect each board to up to three other ones and daisy chaining them together in any configuration you want.
 
 To connect a board to another, connect one of the usarts of a board to the usart of another, then lay out the LED strip from each board towards the other. To do this, connect TX and RX lines of any USART to the RX and TX lines of another board respectively (that is to say TX connects to RX and visa versa) using the jumper cables.
-Make sure that the TX and RX pair belong to the same USART (denoted by the groups on the diagram).
+Make sure that the TX and RX pair belong to the same USART (denoted by the number after TX and RX).
 
 For the LED strip, i can be any length you wish. Lay it out in the direction of the connecting board and connect the data wire to the corresponding LED pin, and connect the ground pins together across the entire network. Assuming you bought a long reel LED strip, you will need to solder new wires onto the connection points You can connect multiple boards together in a larger network of boards and it should work regardless of the number of boards.
 
@@ -86,6 +77,7 @@ Once the the command has finished running, the code will be on the board. Unplug
 
 ## Further Reading
 
+- [Incredible collection of Embedded Rust resources](https://github.com/rust-embedded/awesome-embedded-rust) (We cannot compete with this! *Look at it!*)
 - [STM32 HAL library](https://docs.rs/stm32f1xx-hal/0.2.0/stm32f1xx_hal/)
 - [Realtime for the masses (Cortex M)](https://github.com/japaric/cortex-m-rtfm) - Embedded concurrency framework
 - [Embedded Rust eBook](https://rust-embedded.github.io/book/)
