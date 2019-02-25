@@ -2,7 +2,7 @@
 
 This item – our *artefact* – is an interactive gallery piece. It features the behaviour of the famous distance-vector routing algorithm in an approachable, interesting way.
 
-![Photo of the final artefact](photo-display.png?raw=true "Photo of final artefact")
+![Photo of the final artefact](photo-display.jpg?raw=true "Photo of final artefact")
 
 **Why?**
 
